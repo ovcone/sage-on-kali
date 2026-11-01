@@ -2,7 +2,7 @@
 
 > Having trouble slopping crypto tasks? Is your virtual machine's disk space running out from all the Conda instances you're running? Do you want more reproducibility in your life? Then this quasi-repository is for you!
 
-SageMath was [removed from Debian 13](https://tracker.debian.org/news/1463959/sagemath-removed-from-testing/). As Kali Linux's rolling branch is based on Debian (but not Sid), it too lost access to SageMath. This repository builds SageMath in accord with other Python packaging, making it easy to install - just like old times. 
+SageMath was [removed from Debian 13](https://tracker.debian.org/news/1463959/sagemath-removed-from-testing/). As Kali Linux's rolling branch is based on Debian (but not Sid), it too lost access to SageMath. This repository builds SageMath in accord with other Python packaging, making it easy to install - just like old times. The repository also publishes the eclib runtime packages (`libec16` and `eclib-tools`) that Sage requires but current Kali no longer carries.
 
 ## Install on Kali
 

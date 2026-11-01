@@ -196,6 +196,33 @@ SID_BINARY_SOURCES
 fi
 cd "$WORK"
 
+# Kali no longer ships eclib, but Sage's generated shared-library
+# dependencies still require its runtime packages. Download the matching
+# Debian binaries into this repository so clients do not need Debian sources.
+mkdir -p compatibility
+cat > compatibility/sid.sources <<'SID_BINARY_SOURCES'
+Types: deb
+URIs: https://deb.debian.org/debian
+Suites: sid
+Components: main
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+SID_BINARY_SOURCES
+apt-get \
+    -o "Dir::Etc::sourcelist=$WORK/compatibility/sid.sources" \
+    -o Dir::Etc::sourceparts=- \
+    -o "Dir::State::lists=$WORK/apt/lists" \
+    update
+(
+    cd compatibility
+    apt-get \
+        -o "Dir::Etc::sourcelist=$WORK/compatibility/sid.sources" \
+        -o Dir::Etc::sourceparts=- \
+        -o "Dir::State::lists=$WORK/apt/lists" \
+        download eclib-tools libec16
+)
+mv compatibility/*.deb .
+rm -rf compatibility/sid.sources compatibility/partial
+
 runuser -u builder -- bash -s <<-'COMPILE'
 	set -euo pipefail
 	source build.env
@@ -223,8 +250,20 @@ runuser -u builder -- bash -s <<-'COMPILE'
 	version = os.environ["PACKAGE_VERSION"]
 	outputs = []
 
-	for package in ("sagemath", "python3-sage", "sagemath-jupyter", "sagemath-doc"):
-	    matches = list(work.glob(f"{package}_{version}_*.deb"))
+	for package in (
+	    "sagemath",
+	    "python3-sage",
+	    "sagemath-jupyter",
+	    "sagemath-doc",
+	    "eclib-tools",
+	    "libec16",
+	):
+	    pattern = (
+	        f"{package}_{version}_*.deb"
+	        if package in ("sagemath", "python3-sage", "sagemath-jupyter", "sagemath-doc")
+	        else f"{package}_*.deb"
+	    )
+	    matches = list(work.glob(pattern))
 	    if len(matches) != 1:
 	        raise ValueError(f"expected one {package} package")
 
@@ -239,7 +278,10 @@ runuser -u builder -- bash -s <<-'COMPILE'
 	        text=True,
 	    ).split()
 	    name, built_version, architecture = identity
-	    if name != package or built_version != version or architecture not in ("amd64", "all"):
+	    if name != package or (
+	        package in ("sagemath", "python3-sage", "sagemath-jupyter", "sagemath-doc")
+	        and built_version != version
+	    ) or architecture not in ("amd64", "all"):
 	        raise ValueError(f"incorrect Sage package identity: {identity}")
 
 	    outputs.append(deb)
