@@ -1,0 +1,8 @@
+Origin: SageMath for Kali
+Label: SageMath for Kali
+Suite: kali-rolling
+Codename: kali-rolling
+Architectures: amd64 source
+Components: main
+Description: Stable SageMath built on an nightly basis for Kali Rolling
+ValidFor: 14d
