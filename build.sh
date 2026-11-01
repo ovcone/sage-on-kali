@@ -168,14 +168,32 @@ runuser -u builder -- bash -s <<-'PREPARE'
 	make -f debian/rules debian/control
 PREPARE
 
-# Build dependencies come only from the normal Kali binary sources.
+# Prefer build dependencies from Kali binaries, then retry with Debian sid binaries if needed.
 mkdir dependencies
 cd dependencies
-mk-build-deps \
-    --install \
-    --remove \
-    --tool 'apt-get -y --no-install-recommends' \
-    "$WORK/source/debian/control"
+install_build_deps() {
+    mk-build-deps \
+        --install \
+        --remove \
+        --tool 'apt-get -y --no-install-recommends' \
+        "$WORK/source/debian/control"
+}
+
+if ! install_build_deps; then
+    cat > /etc/apt/sources.list.d/debian-sid-builddeps.sources <<'SID_BINARY_SOURCES'
+Types: deb
+URIs: https://deb.debian.org/debian
+Suites: sid
+Components: main
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+SID_BINARY_SOURCES
+    apt-get update
+    if ! install_build_deps; then
+        rm -f /etc/apt/sources.list.d/debian-sid-builddeps.sources
+        exit 1
+    fi
+    rm -f /etc/apt/sources.list.d/debian-sid-builddeps.sources
+fi
 cd "$WORK"
 
 runuser -u builder -- bash -s <<-'COMPILE'
