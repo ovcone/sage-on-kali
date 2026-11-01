@@ -20,8 +20,13 @@ reprepro_command=(
     --outdir "$PWD/.work/site"
 )
 
-for package in sagemath python3-sage sagemath-jupyter sagemath-doc; do
-    package_files=(out/"${package}_${version}_"*.deb)
+for package in sagemath python3-sage sagemath-jupyter sagemath-doc eclib-tools libec16; do
+    if [[ $package == sagemath || $package == python3-sage ||
+        $package == sagemath-jupyter || $package == sagemath-doc ]]; then
+        package_files=(out/"${package}_${version}_"*.deb)
+    else
+        package_files=(out/"${package}_"*.deb)
+    fi
     if [[ ${#package_files[@]} != 1 || ! -f ${package_files[0]} ]]; then
         echo "Missing $package package" >&2
         exit 1
@@ -32,7 +37,7 @@ for package in sagemath python3-sage sagemath-jupyter sagemath-doc; do
             '--showformat=${Package} ${Version} ${Architecture}' \
             "${package_files[0]}"
     )
-    if [[ $identity != "$package $version amd64" && $identity != "$package $version all" ]]; then
+    if [[ $identity != "$package "*' amd64' && $identity != "$package "*' all' ]]; then
         echo "Incorrect Sage package identity: $identity" >&2
         exit 1
     fi
