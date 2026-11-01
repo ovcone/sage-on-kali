@@ -10,7 +10,13 @@ SageMath was [removed from Debian 13](https://tracker.debian.org/news/1463959/sa
 BASE_URL='https://sagemath.ovc.one'
 sudo install -d -m 0755 /etc/apt/keyrings
 sudo curl -fsSL "$BASE_URL/archive-key.asc" -o /etc/apt/keyrings/sage-kali.asc
-sudo curl -fsSL "$BASE_URL/distributions" -o /etc/apt/sources.list.d/sage-kali.sources
+sudo tee /etc/apt/sources.list.d/sage-kali.sources >/dev/null <<EOF
+Types: deb deb-src
+URIs: $BASE_URL
+Suites: kali-rolling
+Components: main
+Signed-By: /etc/apt/keyrings/sage-kali.asc
+EOF
 sudo apt update
 sudo apt install sagemath
 
