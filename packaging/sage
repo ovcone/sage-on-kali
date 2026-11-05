@@ -1,0 +1,13 @@
+#!/bin/sh
+# System SageMath uses Debian's Python and its installed mathematics libraries.
+case "${1-}" in
+    -python|--python)
+        shift
+        exec /usr/bin/python3 "$@"
+        ;;
+    -t|--test)
+        shift
+        exec /usr/bin/python3 -m sage.doctest "$@"
+        ;;
+esac
+exec /usr/bin/python3 -m sage.cli "$@"

@@ -42,7 +42,7 @@ jobs:
           name: build-logs
           path: |
             .work/build/build.log
-            .work/build/source/logs/
+            .work/build/sagemath/source/logs/
           retention-days: 1
           if-no-files-found: error
           compression-level: 0
@@ -61,6 +61,17 @@ jobs:
         with:
           name: packages
           path: out
+      - name: Verify installation on fresh Kali
+        env:
+          KALI_IMAGE_DIGEST: *kali-image
+        run: |
+          docker run --rm --platform linux/amd64 \
+            --volume "$GITHUB_WORKSPACE/out:/packages:ro" \
+            --env DEBIAN_FRONTEND=noninteractive \
+            "$KALI_IMAGE_DIGEST" bash -euc '
+              apt-get update
+              apt-get install -y --no-install-recommends /packages/*.deb
+            '
       - name: Create and sign a fresh APT site
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}

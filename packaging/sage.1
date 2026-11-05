@@ -1,0 +1,35 @@
+.TH SAGE 1 "" "SageMath for Kali" "User Commands"
+.SH NAME
+sage \- mathematical software using the system Python
+.SH SYNOPSIS
+.B sage
+.RI [ options ]
+.RI [ files ...]
+.SH DESCRIPTION
+Start the SageMath interactive interpreter, execute Sage files, or run a command.
+The Kali package uses /usr/bin/python3 and Debian's installed mathematics libraries.
+.SH OPTIONS
+.TP
+.BI "-c " command
+Execute Sage code, including Sage's preparsing syntax.
+.TP
+.BR -python ", " --python
+Run /usr/bin/python3, forwarding all following arguments unchanged.
+For example: sage -python script.py, or sage -python -c 'import sage.all'.
+.TP
+.BR -t ", " --test
+Run Sage's doctest runner, forwarding all following arguments.
+For example: sage -t example.sage. Use sage -t --help for runner options.
+.TP
+.BR -n ", " --notebook
+Start the Jupyter notebook server. Requires sagemath-jupyter.
+.TP
+.BR -V ", " --version
+Print the installed Sage version.
+.TP
+.BR -h ", " --help
+Show the options accepted by the installed Sage command-line interface.
+.SH NOTES
+Other arguments are forwarded to Sage's Python command-line interface.
+Python package installation follows Debian's system Python policy; install
+packaged dependencies with APT.

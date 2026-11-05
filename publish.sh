@@ -13,41 +13,52 @@ fi
 mkdir -p .work/reprepro/conf .work/site
 cp distributions .work/reprepro/conf/distributions
 
-version=$(python3 -c 'import json; print(json.load(open("out/build-info.json"))["package_version"])')
 reprepro_command=(
     reprepro
     --basedir "$PWD/.work/reprepro"
     --outdir "$PWD/.work/site"
 )
 
-for package in sagemath python3-sage sagemath-jupyter sagemath-doc eclib-tools libec16; do
-    if [[ $package == sagemath || $package == python3-sage ||
-        $package == sagemath-jupyter || $package == sagemath-doc ]]; then
-        package_files=(out/"${package}_${version}_"*.deb)
-    else
-        package_files=(out/"${package}_"*.deb)
-    fi
-    if [[ ${#package_files[@]} != 1 || ! -f ${package_files[0]} ]]; then
-        echo "Missing $package package" >&2
-        exit 1
-    fi
+# The manifest includes every binary from the Sage and Kali-built eclib sources,
+# including libec-dev and whichever runtime SONAME that eclib release produces.
+python3 - <<'PYTHON'
+import hashlib
+import json
+import subprocess
+from pathlib import Path
 
-    identity=$(
-        dpkg-deb --show \
-            '--showformat=${Package} ${Version} ${Architecture}' \
-            "${package_files[0]}"
-    )
-    if [[ $identity != "$package "*' amd64' && $identity != "$package "*' all' ]]; then
-        echo "Incorrect Sage package identity: $identity" >&2
-        exit 1
-    fi
-
-    "${reprepro_command[@]}" --export=never -S math -P optional \
-        includedeb kali-rolling "${package_files[0]}"
-done
-
-"${reprepro_command[@]}" --export=never -S math -P optional \
-    includedsc kali-rolling "out/sagemath_${version}.dsc"
+output = Path("out")
+metadata = json.loads((output / "build-info.json").read_text())
+binaries = metadata["binary_packages"]
+sources = metadata["source_packages"]
+required = {"sagemath", "python3-sage", "sagemath-jupyter", "sagemath-doc", "eclib-tools", "libec-dev"}
+if not required.issubset({item["name"] for item in binaries}):
+    raise ValueError("missing required Sage/eclib binaries")
+if {item["name"] for item in sources} != {"sagemath", "eclib"}:
+    raise ValueError("expected Sage and eclib source packages")
+command = ["reprepro", "--basedir", str(Path(".work/reprepro").resolve()),
+           "--outdir", str(Path(".work/site").resolve()), "--export=never", "-S", "math", "-P", "optional"]
+seen = set()
+for kind, items in (("includedeb", binaries), ("includedsc", sources)):
+    for item in items:
+        filename = item["filename"]
+        if Path(filename).name != filename or filename in seen:
+            raise ValueError("invalid or duplicate artifact filename")
+        seen.add(filename)
+        path = output / filename
+        with path.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        if digest != item["sha256"] or path.stat().st_size != item["size"]:
+            raise ValueError(f"corrupt artifact: {filename}")
+        if kind == "includedeb":
+            identity = subprocess.check_output(
+                ["dpkg-deb", "--show", "--showformat=${Package} ${Version} ${Architecture}", str(path)],
+                text=True,
+            ).split()
+            if identity != [item["name"], item["version"], item["architecture"]] or identity[2] not in ("amd64", "all"):
+                raise ValueError(f"incorrect binary identity: {identity}")
+        subprocess.run(command + [kind, "kali-rolling", str(path)], check=True)
+PYTHON
 "${reprepro_command[@]}" export kali-rolling
 "${reprepro_command[@]}" check kali-rolling
 "${reprepro_command[@]}" checkpool
